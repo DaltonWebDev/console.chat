@@ -3,6 +3,13 @@ header("Content-type: application/json; charset=utf-8");
 header("Access-Control-Allow-Origin: *");
 $domain = !empty($_GET["domain"]) ? strtolower(strip_tags($_GET["domain"])) : false;
 $message = !empty($_GET["message"]) ? strip_tags($_GET["message"]) : false;
+$blacklistedWords = explode("\n", file_get_contents("etc/blacklisted-words.txt"));
+$matches = array();
+$matchFound = preg_match_all(
+	"/\b(" . implode($blacklistedWords,"|") . ")\b/i", 
+	$message, 
+	$matches
+);
 $time = time();
 $ip = $_SERVER["HTTP_CF_CONNECTING_IP"];
 $identifier = hash("sha256", $ip);
@@ -12,10 +19,7 @@ if (file_exists("last-sent/$identifier.json")) {
 } else {
 	$lastSentTime = false;
 }
-$bannedIdentifiers = [
-	"6b89624d55c5babed7e2162010c620542547c00fd7251ca30ef35da623acf72a",
-	"f191624533bd5ec2b3295a2e99e79f15a4457bcf0200d0ca6a60dfb4390d1468"
-];
+$bannedIdentifiers = explode("\n", json_decode(file_get_contents("etc/banned-users.txt"), true));
 if (in_array($identifier, $bannedIdentifiers)) {
 	$error = "You have been banned!";
 } else if ($domain === false) {
@@ -26,8 +30,10 @@ if (in_array($identifier, $bannedIdentifiers)) {
 	$error = "Please enter a message";
 } else if ($time < $lastSentTime + 10) {
 	$error = "Please slow down! You can only send a message once every 10 seconds.";
-} else if (strlen($message) > 200) {
-	$error = "Message can't exceed 200 characters";
+} else if (strlen($message) > 500) {
+	$error = "Message can't exceed 500 characters";
+} else if ($matchFound) {
+	$error = "Your message was blocked because my automated filters detected blacklisted word(s). If this was an error I apologize! Keep in mind this feature is for the greater good.";
 } else {
 	$messageContents = file_get_contents("messages/$domain.json");
 	if ($messageContents === false) {
@@ -35,15 +41,8 @@ if (in_array($identifier, $bannedIdentifiers)) {
 	} else {
 		$messageArray = json_decode($messageContents, true);
 	}
-	if (file_exists("identifiers/$identifier.json")) {
-		$identifierJson = json_decode(file_get_contents("identifiers/$identifier.json"), true);
-		$identifierToUsername = $identifierJson["username"];
-	} else {
-		$identifierToUsername = false;
-	}
 	$messageArray[] = [
 		"identifier" => $identifier,
-		"username" => $identifierToUsername,
 		"message" => $message,
 		"time" => $time
 	];

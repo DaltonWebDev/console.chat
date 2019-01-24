@@ -5,8 +5,9 @@ $domain = !empty($_GET["domain"]) ? strtolower(strip_tags($_GET["domain"])) : fa
 $message = !empty($_GET["message"]) ? strip_tags($_GET["message"]) : false;
 $time = time();
 $ip = $_SERVER["HTTP_CF_CONNECTING_IP"];
-if (file_exists("last-sent/$ip.json")) {
-	$lastSentJson = json_decode(file_get_contents("last-sent/$ip.json"), true);
+$identifier = hash("sha256", $ip);
+if (file_exists("last-sent/$identifier.json")) {
+	$lastSentJson = json_decode(file_get_contents("last-sent/$identifier.json"), true);
 	$lastSentTime = $lastSentJson["time"];
 } else {
 	$lastSentTime = false;
@@ -17,10 +18,10 @@ if ($domain === false) {
 	$error = "Invalid domain name";
 } else if ($message === false) {
 	$error = "Please enter a message";
-} else if ($time < $lastSentTime + 5) {
-	$error = "Please slow down! You can only send a message once every 5 seconds.";
-} else if (strlen($message) > 1000) {
-	$error = "Message can't exceed 1,000 characters";
+} else if ($time < $lastSentTime + 10) {
+	$error = "Please slow down! You can only send a message once every 10 seconds.";
+} else if (strlen($message) > 200) {
+	$error = "Message can't exceed 200 characters";
 } else {
 	$messageContents = file_get_contents("messages/$domain.json");
 	if ($messageContents === false) {
@@ -28,7 +29,15 @@ if ($domain === false) {
 	} else {
 		$messageArray = json_decode($messageContents, true);
 	}
+	if (file_exists("identifiers/$identifier.json")) {
+		$identifierJson = json_decode(file_get_contents("identifiers/$identifier.json"), true);
+		$identifierToUsername = $identifierJson["username"];
+	} else {
+		$identifierToUsername = false;
+	}
 	$messageArray[] = [
+		"identifier" => $identifier,
+		"username" => $identifierToUsername,
 		"message" => $message,
 		"time" => $time
 	];
@@ -44,7 +53,7 @@ if ($domain === false) {
 	$lastSentArray = [
 		"time" => $time
 	];
-	file_put_contents("last-sent/$ip.json", json_encode($lastSentArray));
+	file_put_contents("last-sent/$identifier.json", json_encode($lastSentArray));
 	$error = false;
 }
 $outputArray = [

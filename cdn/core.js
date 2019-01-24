@@ -1,7 +1,7 @@
 var domain = window.location.hostname;
 console.log('Welcome to console.chat! You\'re chatting with other people who visited ' + domain + ' and opened their browser\'s console!');
 console.log('To send a message it must be in this format: send(\'your message here\')\nExample: If you want to say "Hey, what\'s up?" send(\'Hey, what\'s up?\')');
-console.log('Created by @DaltonEdwards :)');
+console.log('Created by @DaltonEdwards :) Source Code: https://github.com/DaltonWebDev/console.chat');
 var messageCount = 0;
 function loadMessages() {
 	var request = new XMLHttpRequest();
@@ -12,7 +12,11 @@ function loadMessages() {
 			var json = JSON.parse(request.responseText);
     		for (i in json.messages) {
     			if (messageCount === 0 || i > messageCount) {
-					console.log(json.messages[i].message);
+    				if (json.messages[i].username === false) {
+						console.log(json.messages[i].message);
+					} else {
+						console.log(json.messages[i].username + ': ' + json.messages[i].message);
+					}
 					messageCount++;
 				}
 			}
@@ -34,16 +38,40 @@ function send(message) {
 			if (json.error !== false) {
 				console.error(json.error);
 			} else {
-				return true;
+				// success
+				console.log('Message sent!');
 			}
   		} else {
     		// We reached our target server, but it returned an error
-    		return false;
+    		console.log('The server is returning an error! Please try again later.');
   		}
 	};
 	request.onerror = function() {
 		// There was a connection error of some sort
-		return false;
+		console.log('Encountered a connection problem.');
+	};
+	request.send();
+}
+function username(username) {
+	var request = new XMLHttpRequest();
+	request.open('GET', 'https://console.chat/api/username.php?username=' + username, true);
+	request.onload = function() {
+		if (request.status >= 200 && request.status < 400) {
+			var json = JSON.parse(request.responseText);
+			if (json.error !== false) {
+				console.error(json.error);
+			} else {
+				// success
+				console.log('Username set!');
+			}
+  		} else {
+    		// We reached our target server, but it returned an error
+    		console.log('The server is returning an error! Please try again later.');
+  		}
+	};
+	request.onerror = function() {
+		// There was a connection error of some sort
+		console.log('Encountered a connection problem.');
 	};
 	request.send();
 }

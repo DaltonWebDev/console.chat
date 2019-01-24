@@ -12,7 +12,13 @@ if (file_exists("last-sent/$identifier.json")) {
 } else {
 	$lastSentTime = false;
 }
-if ($domain === false) {
+$bannedIdentifiers = [
+	"6b89624d55c5babed7e2162010c620542547c00fd7251ca30ef35da623acf72a",
+	"f191624533bd5ec2b3295a2e99e79f15a4457bcf0200d0ca6a60dfb4390d1468"
+];
+if (in_array($identifier, $bannedIdentifiers)) {
+	$error = "You have been banned!";
+} else if ($domain === false) {
 	$error = "Please enter a domain";
 } else if (!filter_var(gethostbyname($domain), FILTER_VALIDATE_IP)) {
 	$error = "Invalid domain name";

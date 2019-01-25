@@ -1,4 +1,3 @@
-var username = false;
 var domain = window.location.hostname;
 function welcome() { 
 	console.log('Welcome to console.chat! You\'re chatting with other people who visited ' + domain + ' and opened their browser\'s console! Type help() and hit enter to learn more.');
@@ -7,7 +6,11 @@ function welcome() {
 	console.log('Watch out for impersonators! Anybody can easily set their username to anything this is just a fun place to chat.');
 }
 function help() {
-	console.log("HELP >\nSet Username: Type var username = 'your username' and hit enter.\nSend Message: Type send('your message') and hit enter.\n\nDid you know you can also do send`your message`?");
+	console.log("HELP >\nSet Username: Type username('your username') and hit enter.\nSend Message: Type send('your message') and hit enter.\n\nDid you know you can also do send`your message`?");
+}
+function username(x) {
+	localStorage.setItem('username', x);
+	console.log('Username set to: ' + x + '!');
 }
 var messageCount = 0;
 function loadMessages() {
@@ -34,6 +37,7 @@ function loadMessages() {
 	request.send('domain=' + domain);
 }
 function send(message) {
+	var usernameLS = localStorage.getItem('username');
 	var request = new XMLHttpRequest();
 	request.open('POST', 'https://console.chat/api/send.php', true);
 	request.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
@@ -55,10 +59,10 @@ function send(message) {
 		// There was a connection error of some sort
 		console.log('Encountered a connection problem.');
 	};
-	if (username === false) {
+	if (usernameLS === null) {
 		request.send('domain=' + domain + '&message=' + message);
 	} else {
-		request.send('domain=' + domain + '&message=' + username + ': ' + message);
+		request.send('domain=' + domain + '&message=' + usernameLS + ': ' + message);
 	}
 }
 loadMessages();

@@ -1,8 +1,8 @@
 <?php
 header("Content-type: application/json; charset=utf-8");
 header("Access-Control-Allow-Origin: *");
-$domain = !empty($_GET["domain"]) ? strtolower(strip_tags($_GET["domain"])) : false;
-$message = !empty($_GET["message"]) ? strip_tags($_GET["message"]) : false;
+$domain = !empty($_REQUEST["domain"]) ? strtolower(strip_tags($_REQUEST["domain"])) : false;
+$message = !empty($_REQUEST["message"]) ? strip_tags($_REQUEST["message"]) : false;
 $blacklistedWords = explode("\n", file_get_contents("etc/blacklisted-words.txt"));
 $matches = array();
 $matchFound = preg_match_all(

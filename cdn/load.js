@@ -12,7 +12,8 @@ function help() {
 var messageCount = 0;
 function loadMessages() {
 	var request = new XMLHttpRequest();
-	request.open('GET', 'https://console.chat/api/read.php?domain=' + domain, true);
+	request.open('POST', 'https://console.chat/api/read.php', true);
+	request.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
 	request.onload = function() {
 		if (request.status >= 200 && request.status < 400) {
 			// Success!
@@ -30,15 +31,12 @@ function loadMessages() {
 	request.onerror = function() {
 		console.error('Connection problem');
 	};
-	request.send();
+	request.send('domain=' + domain);
 }
 function send(message) {
 	var request = new XMLHttpRequest();
-	if (username === false) {
-		request.open('GET', 'https://console.chat/api/send.php?domain=' + domain + '&message=' + message, true);
-	} else {
-		request.open('GET', 'https://console.chat/api/send.php?domain=' + domain + '&message=' + username + ': ' + message, true);
-	}
+	request.open('POST', 'https://console.chat/api/send.php', true);
+	request.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
 	request.onload = function() {
 		if (request.status >= 200 && request.status < 400) {
 			var json = JSON.parse(request.responseText);
@@ -57,10 +55,11 @@ function send(message) {
 		// There was a connection error of some sort
 		console.log('Encountered a connection problem.');
 	};
-	request.send();
-}
-function username(username) {
-	var username = username;
+	if (username === false) {
+		request.send('domain=' + domain + '&message=' + message);
+	} else {
+		request.send('domain=' + domain + '&message=' + username + ': ' + message);
+	}
 }
 loadMessages();
 // say welcome after 5 seconds

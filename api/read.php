@@ -1,7 +1,7 @@
 <?php
 header("Content-type: application/json; charset=utf-8");
 header("Access-Control-Allow-Origin: *");
-$domain = !empty($_GET["domain"]) ? strtolower($_GET["domain"]) : false;
+$domain = !empty($_REQUEST["domain"]) ? strtolower($_REQUEST["domain"]) : false;
 $messages = false;
 if ($domain === false) {
 	$error = "DOMAIN_MISSING";

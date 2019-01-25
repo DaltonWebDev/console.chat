@@ -2,7 +2,7 @@ var username = false;
 var domain = window.location.hostname;
 function welcome() { 
 	console.log('Welcome to console.chat! You\'re chatting with other people who visited ' + domain + ' and opened their browser\'s console! Type help() and hit enter to learn more.');
-	console.log('To send a message it must be in this format: send(\'your message here\')\nExample: If you want to say "Hey, what\'s up?" type send(\'Hey, what\'s up?\') and hit enter.');
+	console.log('To send a message it must be in this format: send(\'your message here\')\nExample: If you want to say "Hey, what\'s up?" type send(\"Hey, what\'s up?\") and hit enter.');
 	console.log('Created by Dalton Edwards :) Source Code: https://github.com/DaltonWebDev/console.chat / Follow Me: https://twitter.com/DaltonEdwards');
 	console.log('Watch out for impersonators! Anybody can easily set their username to anything this is just a fun place to chat.');
 }

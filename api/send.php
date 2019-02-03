@@ -3,13 +3,6 @@ header("Content-type: application/json; charset=utf-8");
 header("Access-Control-Allow-Origin: *");
 $domain = !empty($_REQUEST["domain"]) ? strtolower(strip_tags($_REQUEST["domain"])) : false;
 $message = !empty($_REQUEST["message"]) ? strip_tags($_REQUEST["message"]) : false;
-$blacklistedWords = explode("\n", file_get_contents("etc/blacklisted-words.txt"));
-$matches = array();
-$matchFound = preg_match_all(
-	"/\b(" . implode($blacklistedWords,"|") . ")\b/i", 
-	$message, 
-	$matches
-);
 $time = time();
 $ip = $_SERVER["HTTP_CF_CONNECTING_IP"];
 $identifier = hash("sha256", $ip);
@@ -28,37 +21,58 @@ if (in_array($identifier, $bannedIdentifiers)) {
 	$error = "Invalid domain name";
 } else if ($message === false) {
 	$error = "Please enter a message";
-} else if ($time < $lastSentTime + 10) {
-	$error = "Please slow down! You can only send a message once every 10 seconds.";
+} else if ($time < $lastSentTime + 5) {
+	$error = "Please slow down! You can only send a message once every 5 seconds.";
 } else if (strlen($message) > 500) {
 	$error = "Message can't exceed 500 characters";
-} else if ($matchFound) {
-	$error = "Your message was blocked because my automated filters detected blacklisted word(s). If this was an error I apologize! Keep in mind this feature is for the greater good.";
 } else {
-	$messageContents = file_get_contents("messages/$domain.json");
+	$messageContents = file_get_contents("messages/$domain/$time.json");
 	if ($messageContents === false) {
 		$messageArray = [];
 	} else {
 		$messageArray = json_decode($messageContents, true);
 	}
+	$logContents = file_get_contents("messages/$domain/log.json");
+	if ($logContents === false) {
+		$logArray = [];
+	} else {
+		$logArray = json_decode($logContents, true);
+	}
+	$check = json_decode(file_get_contents("https://www.purgomalum.com/service/json?text=" . urlencode($message)), true);
+	$messageFiltered = $check["result"];
 	$messageArray[] = [
 		"identifier" => $identifier,
-		"message" => $message,
+		"message" => $messageFiltered,
+		"time" => $time
+	];
+	$logArray[] = [
+		"identifier" => $identifier,
+		"message" => $messageFiltered,
 		"time" => $time
 	];
 	$directories[] = "messages";
+	$directories[] = "messages/$domain";
 	$directories[] = "last-sent";
+	$directories[] = "identifiers";
 	foreach ($directories as $directory) {
 		if (!file_exists($directory)) {
     		mkdir($directory, 0777, true);
 		}
 	}
-	file_put_contents("messages/$domain.json", json_encode($messageArray));
-	// update last sent
+	file_put_contents("messages/$domain/$time.json", json_encode($messageArray));
+	// only save 100 messages in log
+	if (count($logArray) > 100) {
+		$removed = array_shift($logArray);
+	}
+	file_put_contents("messages/$domain/log.json", json_encode($logArray));
 	$lastSentArray = [
 		"time" => $time
 	];
 	file_put_contents("last-sent/$identifier.json", json_encode($lastSentArray));
+	$identifierArray = [
+		"ip" => $ip
+	];
+	file_put_contents("identifiers/$identifier.json", json_encode($identifierArray));
 	$error = false;
 }
 $outputArray = [

@@ -1,4 +1,31 @@
 <?php
+session_start();
+function autoBanned($string) {
+	$string = str_replace(" ", "", $string);
+	$badWords = array(
+		"nigger",
+        "fag",
+        "faggot"
+    );
+    $matches = array();
+    $matchFound = preg_match_all(
+        "/(" . implode($badWords,"|") . ")/i", 
+        $string, 
+        $matches
+    );
+    if ($matchFound) {
+    	return true;
+    } else {
+    	return false;
+    }
+}
+function ban($identifier) {
+	$banArray = [
+		"time" => time()
+	];
+	file_put_contents("bans/$identifier.json", json_encode($banArray));
+	$_SESSION["banned"] = true;
+}
 header("Content-type: application/json; charset=utf-8");
 header("Access-Control-Allow-Origin: *");
 $domain = !empty($_REQUEST["domain"]) ? strtolower(strip_tags($_REQUEST["domain"])) : false;
@@ -12,33 +39,38 @@ if (file_exists("last-sent/$identifier.json")) {
 } else {
 	$lastSentTime = false;
 }
-$bannedIdentifiers = explode("\n", json_decode(file_get_contents("etc/banned-users.txt"), true));
-if (in_array($identifier, $bannedIdentifiers)) {
+// maybe they cleared browser data
+if (!isset($_SESSION["banned"])) {
+	if (file_exists("bans/$identifier.json")) {
+		$_SESSION["banned"] = true;
+	}
+}
+if (file_exists("bans/$identifier.json")) {
 	$error = "You have been banned!";
+} else if ($_SESSION["banned"] === true) {
+	$error = "Ban evasion detected!";
+	ban($identifier);
 } else if ($domain === false) {
 	$error = "Please enter a domain";
 } else if (!filter_var(gethostbyname($domain), FILTER_VALIDATE_IP)) {
 	$error = "Invalid domain name";
 } else if ($message === false) {
 	$error = "Please enter a message";
-} else if ($time < $lastSentTime + 5) {
+} else if ($time < $lastSentTime + 5 || isset($_SESSION["last-sent"]) && $_SESSION["last-time"] < 5) {
 	$error = "Please slow down! You can only send a message once every 5 seconds.";
 } else if (strlen($message) > 500) {
 	$error = "Message can't exceed 500 characters";
+} else if (autoBanned($message)) {
+	$error = "You were automatically banned!";
+	ban($identifier);
 } else {
-	$messageContents = file_get_contents("messages/$domain/$time.json");
+	$messageContents = file_get_contents("messages/$domain.json");
 	if ($messageContents === false) {
 		$messageArray = [];
 	} else {
 		$messageArray = json_decode($messageContents, true);
 	}
-	$logContents = file_get_contents("messages/$domain/log.json");
-	if ($logContents === false) {
-		$logArray = [];
-	} else {
-		$logArray = json_decode($logContents, true);
-	}
-	$check = json_decode(file_get_contents("https://www.purgomalum.com/service/json?text=" . urlencode($message)), true);
+	$check = json_decode(file_get_contents("https://www.purgomalum.com/service/json?add=porn&text=" . urlencode($message)), true);
 	$messageFiltered = $check["result"];
 	$messageArray[] = [
 		"identifier" => $identifier,
@@ -51,24 +83,20 @@ if (in_array($identifier, $bannedIdentifiers)) {
 		"time" => $time
 	];
 	$directories[] = "messages";
-	$directories[] = "messages/$domain";
 	$directories[] = "last-sent";
 	$directories[] = "identifiers";
+	$directories[] = "bans";
 	foreach ($directories as $directory) {
 		if (!file_exists($directory)) {
     		mkdir($directory, 0777, true);
 		}
 	}
-	file_put_contents("messages/$domain/$time.json", json_encode($messageArray));
-	// only save 100 messages in log
-	if (count($logArray) > 100) {
-		$removed = array_shift($logArray);
-	}
-	file_put_contents("messages/$domain/log.json", json_encode($logArray));
+	file_put_contents("messages/$domain.json", json_encode($messageArray));
 	$lastSentArray = [
 		"time" => $time
 	];
 	file_put_contents("last-sent/$identifier.json", json_encode($lastSentArray));
+	$_SESSION["last-sent"] = $time;
 	$identifierArray = [
 		"ip" => $ip
 	];

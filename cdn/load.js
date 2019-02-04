@@ -11,24 +11,17 @@ function username(x) {
 	localStorage.setItem('username', x);
 	console.log('Username set to: ' + x + '!');
 }
-function loadLog() {
-	var myRequest = new Request('https://console.chat/api/log.php?domain=' + domain);
-	fetch(myRequest)
-  		.then(function(response) { return response.json(); })
-  		.then(function(data) {
-  			for (i in data.messages) {
-  				console.log(data.messages[i].message);
-    		}
-  	});
-}
+var messageCount = 0;
 function loadMessages() {
-	var time = Math.floor(Date.now() / 1000);
-	var myRequest = new Request('https://console.chat/api/read.php?domain=' + domain + '&time=' + time);
+	var myRequest = new Request('https://console.chat/api/read.php?domain=' + domain);
 	fetch(myRequest)
   		.then(function(response) { return response.json(); })
   		.then(function(data) {
   			for (i in data.messages) {
-  				console.log(data.messages[i].message);
+  				if (messageCount === 0 || i > messageCount) {
+  					console.log(data.messages[i].message);
+  					messageCount++;
+  				}
     		}
   	});
 }
@@ -58,6 +51,6 @@ function send(message) {
   		}
   	});
 }
-loadLog();
+loadMessages();
 setInterval(loadMessages, 1000);
 setTimeout(welcome, 5000);

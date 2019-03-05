@@ -4,13 +4,13 @@ function autoBanned($string) {
 	$string = str_replace(" ", "", $string);
 	$badWords = array(
 		"nigger",
-        "fag",
-        "faggot"
+		"fag",
+		"faggot"
     );
     $matches = array();
     $matchFound = preg_match_all(
-        "/(" . implode($badWords,"|") . ")/i", 
-        $string, 
+        "/(" . implode($badWords,"|") . ")/i",
+        $string,
         $matches
     );
     if ($matchFound) {
@@ -30,14 +30,18 @@ header("Content-type: application/json; charset=utf-8");
 header("Access-Control-Allow-Origin: *");
 $domain = !empty($_REQUEST["domain"]) ? strtolower(strip_tags($_REQUEST["domain"])) : false;
 $message = !empty($_REQUEST["message"]) ? strip_tags($_REQUEST["message"]) : false;
+$color = !empty($_REQUEST["color"]) ? strip_tags($_REQUEST["color"]) : false;
+$currentMessageHash = hash("sha256", strtolower(str_replace(" ", "", $message)));
 $time = time();
 $ip = $_SERVER["HTTP_CF_CONNECTING_IP"];
 $identifier = hash("sha256", $ip);
 if (file_exists("last-sent/$identifier.json")) {
 	$lastSentJson = json_decode(file_get_contents("last-sent/$identifier.json"), true);
 	$lastSentTime = $lastSentJson["time"];
+	$lastSentMessage = $lastSentJson["message"];
 } else {
 	$lastSentTime = false;
+	$lastSentMessage = false;
 }
 // maybe they cleared browser data
 if (!isset($_SESSION["banned"])) {
@@ -56,8 +60,13 @@ if (file_exists("bans/$identifier.json")) {
 	$error = "Invalid domain name";
 } else if ($message === false) {
 	$error = "Please enter a message";
-} else if ($time < $lastSentTime + 5 || isset($_SESSION["last-sent"]) && $_SESSION["last-time"] < 5) {
+} else if ($color !== false && strlen($color) !== 6 || $color !== false && !ctype_alnum($color)) {
+	$error = "Please enter a valid hex color without the # sign :)";
+// just in case IP changes
+} else if ($time < $lastSentTime + 5 || $time < $_SESSION["last-time"] + 5) {
 	$error = "Please slow down! You can only send a message once every 5 seconds.";
+} else if ($currentMessageHash === $lastSentMessage) {
+	$error = "You just said that!";
 } else if (strlen($message) > 500) {
 	$error = "Message can't exceed 500 characters";
 } else if (autoBanned($message)) {
@@ -75,11 +84,7 @@ if (file_exists("bans/$identifier.json")) {
 	$messageArray[] = [
 		"identifier" => $identifier,
 		"message" => $messageFiltered,
-		"time" => $time
-	];
-	$logArray[] = [
-		"identifier" => $identifier,
-		"message" => $messageFiltered,
+		"color" => $color,
 		"time" => $time
 	];
 	$directories[] = "messages";
@@ -93,7 +98,8 @@ if (file_exists("bans/$identifier.json")) {
 	}
 	file_put_contents("messages/$domain.json", json_encode($messageArray));
 	$lastSentArray = [
-		"time" => $time
+		"time" => $time,
+		"message" => hash("sha256", strtolower(str_replace(" ", "", $message)))
 	];
 	file_put_contents("last-sent/$identifier.json", json_encode($lastSentArray));
 	$_SESSION["last-sent"] = $time;

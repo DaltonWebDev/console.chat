@@ -1,11 +1,19 @@
 var domain = window.location.hostname;
-function welcome() { 
+function cc() {
+	var enabled = localStorage.getItem('enabled');
+	if (enabled === null) {
+		localStorage.setItem('enabled', 'true');
+	} else {
+		localStorage.removeItem('enabled');
+	}
+	location.reload(true);
+}
+function welcome() {
 	console.log('Welcome to console.chat! You\'re chatting with other people who visited ' + domain + ' and opened their browser\'s console! Type help() and hit enter to learn more.');
-	console.log('To send a message it must be in this format: send("your message here")\nExample: If you want to say Hey everybody! type send("Hey everybody!") and hit enter.');
 	console.log('Created by Dalton Edwards :) Source Code: https://github.com/DaltonWebDev/console.chat / Follow Me: https://twitter.com/DaltonEdwards');
 }
 function help() {
-	console.log('HELP >\nSet Username: Type username("your username") and hit enter.\nSend Message: Type send("your message") and hit enter.\n\nDid you know you can also do send`your message`?');
+	console.log('HELP >\nSet Username: Type username("your username") and hit enter.\nSend Message: Type send("your message") and hit enter. You can also include a second parameter to change text color like this: send("your message", "254cf5") - enter any valid hex code without the # sign.\n\nDid you know you can also do send`your message`?');
 }
 function username(x) {
 	localStorage.setItem('username', x);
@@ -19,13 +27,14 @@ function loadMessages() {
   		.then(function(data) {
   			for (i in data.messages) {
   				if (messageCount === 0 || i > messageCount) {
-  					console.log(data.messages[i].message);
+						console.log('%c ' + data.messages[i].message, 'color: #' + data.messages[i].color);
+  					//console.log(data.messages[i].message);
   					messageCount++;
   				}
     		}
   	});
 }
-function send(message) {
+function send(message, color = '000000') {
 	var usernameLS = localStorage.getItem('username');
 	var myRequest = new Request('https://console.chat/api/send.php');
 	if (usernameLS === null) {
@@ -33,24 +42,34 @@ function send(message) {
 	} else {
 		var outputtedMessage = usernameLS + ': ' + message;
 	}
-	var data = {"domain": domain, "message": outputtedMessage};
+	var data = {"domain": domain, "message": outputtedMessage, "color": color};
 	var formData  = new FormData();
   	for (var name in data) {
     	formData.append(name, data[name]);
  	}
 	fetch(myRequest, {
-		method: 'POST', 
+		method: 'POST',
 		body: formData
 	})
-  	.then(function(response) { return response.json(); })
-  	.then(function(data) {
-  		if (data.error !== false) {
-  			console.error(data.error);
-  		} else {
-  			console.log('Message sent!');
-  		}
-  	});
+  .then(function(response) { return response.json(); })
+  .then(function(data) {
+  	if (data.error !== false) {
+  		console.error(data.error);
+  	} else {
+  		loadMessages();
+			var enabled = localStorage.getItem('enabled');
+			if (enabled === null) {
+				localStorage.setItem('enabled', 'true');
+				location.reload(true);
+			}
+  	}
+  });
 }
-loadMessages();
-setInterval(loadMessages, 1000);
-setTimeout(welcome, 5000);
+var enabled = localStorage.getItem('enabled');
+if (enabled === null) {
+	console.log(`Want to chat with other people who are browsing on ${domain}? Awesome! Type cc() and hit enter to enable console.chat / Send cc() again at any time to stop loading in messages.`);
+} else {
+	loadMessages();
+	setInterval(loadMessages, 5000);
+	setTimeout(welcome, 2000);
+}
